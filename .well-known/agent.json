@@ -1,0 +1,11 @@
+{
+  "name": "Men's Health Chat Assistant",
+  "description": "AI-powered chat assistant for men's health, fitness, and wellness guidance",
+  "endpoints": [
+    "run",
+    "health_assessment",
+    "fitness_plan",
+    "nutrition_advice"
+  ],
+  "version": "1.0.0"
+}
