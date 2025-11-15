@@ -27,13 +27,28 @@ class EmailService:
     def _initialize_ses(self):
         """Initialize AWS SES client"""
         try:
+            # Check if we're in development mode (skip SES)
+            dev_mode = str(config('DEVELOPMENT_MODE', default='false')).lower() == 'true'
+            if dev_mode:
+                logger.info("Development mode enabled - SES disabled")
+                self.ses_client = None
+                return
+            
             # AWS credentials should be set via environment variables:
             # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+            aws_access_key = config('AWS_ACCESS_KEY_ID', default=None)
+            aws_secret_key = config('AWS_SECRET_ACCESS_KEY', default=None)
+            
+            if not aws_access_key or not aws_secret_key:
+                logger.warning("AWS credentials not found. Email service will be disabled.")
+                self.ses_client = None
+                return
+            
             self.ses_client = boto3.client(
                 'ses',
                 region_name=self.aws_region,
-                aws_access_key_id=config('AWS_ACCESS_KEY_ID', default=None),
-                aws_secret_access_key=config('AWS_SECRET_ACCESS_KEY', default=None)
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key
             )
             logger.info("AWS SES client initialized successfully")
         except NoCredentialsError:
@@ -65,6 +80,33 @@ class EmailService:
             Tuple of (success, message/error)
         """
         if not self.ses_client:
+            # Development mode - generate code but don't send email
+            dev_mode = str(config('DEVELOPMENT_MODE', default='false')).lower() == 'true'
+            if dev_mode:
+                logger.info("Development mode - generating verification code without sending email")
+                
+                # Generate and save verification code
+                verification_code = self._generate_verification_code()
+                expires_at = datetime.utcnow() + timedelta(minutes=15)
+                
+                # Remove existing codes
+                await VerificationCode.find(
+                    VerificationCode.email == email,
+                    VerificationCode.code_type == code_type
+                ).delete()
+                
+                # Save new code
+                code_doc = VerificationCode(
+                    email=email,
+                    code=verification_code,
+                    code_type=code_type,
+                    expires_at=expires_at
+                )
+                await code_doc.save()
+                
+                logger.info(f"🔓 DEV MODE - Verification code for {email}: {verification_code}")
+                return True, f"Development mode: verification code is {verification_code}"
+            
             logger.error("SES client not available")
             return False, "Email service not available"
         
