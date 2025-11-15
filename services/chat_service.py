@@ -72,7 +72,7 @@ class ChatService:
         raw_events: Optional[Dict[str, Any]] = None
     ) -> ChatMessage:
         """
-        Save a message exchange to the database
+        Save user message and bot response as a conversation pair
 
         Args:
             session_id: Session identifier
@@ -85,7 +85,7 @@ class ChatService:
             raw_events: Raw event data from agent
 
         Returns:
-            ChatMessage instance
+            ChatMessage instance with both message and response
         """
         try:
             # Create context with raw events
@@ -93,7 +93,7 @@ class ChatService:
             if raw_events:
                 message_context['raw_events'] = raw_events
 
-            # Create message
+            # Save message-response pair
             message = ChatMessage(
                 session_id=session_id,
                 user_id=user_id,
@@ -119,7 +119,7 @@ class ChatService:
 
                 await session.save()
 
-            logger.info(f"Saved message to session {session_id}")
+            logger.info(f"Saved message pair to session {session_id}")
             return message
 
         except Exception as e:
@@ -147,10 +147,9 @@ class ChatService:
             messages = await ChatMessage.find(
                 ChatMessage.session_id == session_id,
                 ChatMessage.user_id == user_id
-            ).sort("-created_at").limit(limit).to_list()
+            ).sort("created_at").limit(limit).to_list()
 
-            # Reverse to get chronological order
-            messages.reverse()
+            # Messages already in chronological order (oldest first)
             return messages
 
         except Exception as e:

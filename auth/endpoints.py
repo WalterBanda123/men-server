@@ -31,8 +31,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     )
     
     try:
-        # Verify token
-        payload = auth_service.verify_token(credentials.credentials)
+        # Verify token (now async)
+        payload = await auth_service.verify_token(credentials.credentials)
         if payload is None:
             raise credentials_exception
         
@@ -314,3 +314,31 @@ async def verify_token_endpoint(current_user: User = Depends(get_current_user)):
         "email": current_user.email,
         "is_verified": current_user.is_verified
     }
+
+
+@auth_router.post("/logout", response_model=dict)
+async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Logout user by blacklisting the JWT token
+    """
+    try:
+        # Logout by blacklisting the token
+        success = await auth_service.logout(credentials.credentials)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid token or logout failed"
+            )
+        
+        return {
+            "message": "Successfully logged out",
+            "status": "success"
+        }
+        
+    except Exception as e:
+        logger.error(f"Logout error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during logout"
+        )

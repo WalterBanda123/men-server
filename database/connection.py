@@ -8,7 +8,7 @@ from beanie import init_beanie
 from decouple import config
 import logging
 
-from database.models import User, VerificationCode, ChatSession, ChatMessage
+from database.models import User, VerificationCode, ChatSession, ChatMessage, InvalidatedToken
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,8 @@ class DatabaseManager:
                         User,
                         VerificationCode, 
                         ChatSession,
-                        ChatMessage
+                        ChatMessage,
+                        InvalidatedToken
                     ]
                 )
             

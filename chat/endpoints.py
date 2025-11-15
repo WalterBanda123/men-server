@@ -4,7 +4,7 @@ Chat endpoints with WebSocket support and session management
 import logging
 import json
 import time
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -37,8 +37,8 @@ async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials 
     )
 
     try:
-        # Verify token
-        payload = auth_service.verify_token(credentials.credentials)
+        # Verify token (now async)
+        payload = await auth_service.verify_token(credentials.credentials)
         if payload is None:
             raise credentials_exception
 
@@ -91,7 +91,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
     # Authenticate user from token
     try:
-        payload = auth_service.verify_token(token)
+        payload = await auth_service.verify_token(token)
         if not payload:
             await websocket.send_json({"type": "error", "message": "Invalid token"})
             await websocket.close()
@@ -217,6 +217,15 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
 # REST API endpoints for session management
 
+class MessageResponse(BaseModel):
+    id: str
+    message: str  # User's message
+    response: str  # Bot's response
+    message_type: str
+    created_at: str
+    response_time_ms: Optional[int] = None
+
+
 class SessionListResponse(BaseModel):
     sessions: list
     total: int
@@ -228,7 +237,7 @@ class SessionDetailResponse(BaseModel):
     title: str
     created_at: str
     updated_at: str
-    messages: list
+    messages: List[MessageResponse]
 
 
 @chat_router.get("/sessions", response_model=SessionListResponse)
@@ -295,11 +304,12 @@ async def get_session_detail(
 
         message_list = [
             {
-                "message": m.message,
-                "response": m.response,
-                "message_type": m.message_type,
-                "created_at": m.created_at.isoformat() if m.created_at else None,
-                "response_time_ms": m.response_time_ms
+                \"id\": str(m.id),
+                \"message\": m.message,
+                \"response\": m.response,
+                \"message_type\": m.message_type,
+                \"created_at\": m.created_at.isoformat() if m.created_at else \"\",
+                \"response_time_ms\": m.response_time_ms
             }
             for m in messages
         ]

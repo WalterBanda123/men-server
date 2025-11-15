@@ -8,6 +8,22 @@ from pydantic import BaseModel, EmailStr, Field
 from pymongo import IndexModel
 
 
+class InvalidatedToken(Document):
+    """Model to track invalidated/blacklisted JWT tokens"""
+    
+    token_id: str  # JWT 'jti' claim
+    user_email: str
+    invalidated_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime  # When the original token would have expired
+    
+    class Settings:
+        name = "invalidated_tokens"
+        indexes = [
+            IndexModel(["token_id"], unique=True),
+            IndexModel(["expires_at"], expireAfterSeconds=0)  # Auto-delete expired entries
+        ]
+
+
 class User(Document):
     """User model for authentication and profile management"""
     
@@ -76,12 +92,12 @@ class ChatSession(Document):
 
 
 class ChatMessage(Document):
-    """Individual chat messages"""
+    """Chat message pairs (user message + bot response)"""
     
     session_id: str  # Reference to ChatSession.session_id
     user_id: str  # Reference to User._id
-    message: str
-    response: str
+    message: str  # User's message
+    response: str  # Bot's response
     message_type: str = "chat"  # chat, health_assessment, fitness_plan, nutrition_advice
     context: Optional[dict] = {}
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -122,6 +138,12 @@ class ResendCodeRequest(BaseModel):
     """Resend verification code request model"""
     email: EmailStr
     code_type: str = "signup"  # signup, signin, password_reset
+
+
+class LogoutRequest(BaseModel):
+    """Request model for logout"""
+    # No fields needed - token comes from Authorization header
+    pass
 
 
 class UserProfile(BaseModel):
