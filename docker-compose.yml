@@ -1,0 +1,63 @@
+# Docker Compose for Men's Health Server
+version: '3.8'
+
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:7.0
+    container_name: mens-health-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: mens_health_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - mens-health-network
+
+  # Men's Health API service
+  mens-health-api:
+    build: .
+    container_name: mens-health-api
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    environment:
+      # MongoDB Configuration
+      MONGODB_URL: mongodb://admin:password123@mongodb:27017/mens_health_db?authSource=admin
+      DATABASE_NAME: mens_health_db
+      
+      # JWT Configuration
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-jwt-key-change-this-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      
+      # AWS SES Configuration
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      SENDER_EMAIL: ${SENDER_EMAIL}
+      
+      # Server Configuration
+      PORT: 8004
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      
+      # Development mode (bypasses email verification)
+      DEVELOPMENT_MODE: ${DEVELOPMENT_MODE:-false}
+    depends_on:
+      - mongodb
+    networks:
+      - mens-health-network
+    volumes:
+      - ./.well-known:/app/.well-known:ro
+
+volumes:
+  mongodb_data:
+
+networks:
+  mens-health-network:
+    driver: bridge

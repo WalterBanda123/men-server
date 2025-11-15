@@ -151,20 +151,50 @@ async def nutrition_advice_endpoint(request: AgentRequest, current_user: User = 
     )
 
 
-# Create the FastAPI app
+# Initialize the app for production deployment
 app = None
 
-async def get_app():
+async def init_app():
+    """Initialize the application"""
     global app
     if app is None:
         app = await create_mens_health_server()
+        
+        # Add health check endpoint for Docker
+        @app.get("/health")
+        async def health_check():
+            """Health check endpoint for Docker and load balancers"""
+            return {
+                "status": "healthy",
+                "service": "Men's Health Server",
+                "timestamp": asyncio.get_event_loop().time()
+            }
+    
     return app
 
+async def get_app():
+    """Get the initialized app"""
+    return await init_app()
+
+
+# Create app instance for production
+app = asyncio.run(init_app())
 
 if __name__ == "__main__":
     # Development server
     async def main():
         server_app = await create_mens_health_server()
+        
+        # Add health check endpoint
+        @server_app.get("/health")
+        async def health_check():
+            """Health check endpoint for Docker and load balancers"""
+            return {
+                "status": "healthy",
+                "service": "Men's Health Server",
+                "timestamp": asyncio.get_event_loop().time()
+            }
+        
         config = uvicorn.Config(
             server_app,
             host="0.0.0.0",
