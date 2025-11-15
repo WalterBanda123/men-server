@@ -18,6 +18,7 @@ from agents.task_manager import TaskManager
 from chat_agent.agent import base_agent
 from database.connection import init_database, close_database
 from auth.endpoints import auth_router, get_current_user
+from chat.endpoints import chat_router
 from database.models import User
 
 
@@ -48,7 +49,10 @@ async def create_mens_health_server():
     
     # Include authentication router
     app.include_router(auth_router)
-    
+
+    # Include chat router with WebSocket support
+    app.include_router(chat_router)
+
     # Add database cleanup on shutdown
     @app.on_event("shutdown")
     async def shutdown_event():
