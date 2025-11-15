@@ -146,15 +146,21 @@ class LogoutRequest(BaseModel):
     pass
 
 
-class UserProfile(BaseModel):
+class UserProfileUpdate(BaseModel):
     """User profile update model"""
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    age: Optional[int] = None
-    height: Optional[str] = None
-    weight: Optional[str] = None
-    fitness_level: Optional[str] = None
+    first_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    last_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    age: Optional[int] = Field(None, ge=13, le=120)  # Age between 13-120
+    height: Optional[str] = Field(None, max_length=20)
+    weight: Optional[str] = Field(None, max_length=20)
+    fitness_level: Optional[str] = Field(None, pattern="^(beginner|intermediate|advanced)$")
     health_goals: Optional[List[str]] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change password request model"""
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=72)
 
 
 class UserResponse(BaseModel):

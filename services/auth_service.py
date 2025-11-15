@@ -10,7 +10,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status
 from decouple import config
 
-from database.models import User, UserResponse, TokenResponse, InvalidatedToken
+from database.models import User, UserResponse, TokenResponse, InvalidatedToken, UserProfileUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +246,69 @@ class AuthService:
             
         except Exception as e:
             logger.error(f"Error during logout: {e}")
+            return False
+    
+    @staticmethod
+    async def update_user_profile(user: User, profile_data: UserProfileUpdate) -> Optional[User]:
+        """Update user profile information"""
+        try:
+            # Update only provided fields
+            update_data = {}
+            
+            if profile_data.first_name is not None:
+                update_data["first_name"] = profile_data.first_name
+            if profile_data.last_name is not None:
+                update_data["last_name"] = profile_data.last_name
+            if profile_data.age is not None:
+                update_data["age"] = profile_data.age
+            if profile_data.height is not None:
+                update_data["height"] = profile_data.height
+            if profile_data.weight is not None:
+                update_data["weight"] = profile_data.weight
+            if profile_data.fitness_level is not None:
+                update_data["fitness_level"] = profile_data.fitness_level
+            if profile_data.health_goals is not None:
+                update_data["health_goals"] = profile_data.health_goals
+            
+            if not update_data:
+                return user  # No changes to make
+            
+            # Add updated timestamp
+            update_data["updated_at"] = datetime.utcnow()
+            
+            # Update the user
+            for field, value in update_data.items():
+                setattr(user, field, value)
+            
+            await user.save()
+            logger.info(f"User profile updated: {user.email}")
+            return user
+            
+        except Exception as e:
+            logger.error(f"Error updating user profile: {e}")
+            return None
+    
+    @staticmethod
+    async def change_password(user: User, current_password: str, new_password: str) -> bool:
+        """Change user password"""
+        try:
+            # Verify current password
+            if not AuthService.verify_password(current_password, user.password_hash):
+                return False
+            
+            # Hash new password
+            new_password_hash = AuthService.get_password_hash(new_password)
+            
+            # Update password
+            user.password_hash = new_password_hash
+            user.updated_at = datetime.utcnow()
+            
+            await user.save()
+            logger.info(f"Password changed for user: {user.email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error changing password: {e}")
             return False
 
 

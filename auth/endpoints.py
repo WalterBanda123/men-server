@@ -7,7 +7,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from database.models import (
     UserSignup, UserSignin, VerifyEmailRequest, 
-    ResendCodeRequest, TokenResponse, UserResponse, User
+    ResendCodeRequest, TokenResponse, UserResponse, User,
+    UserProfileUpdate, ChangePasswordRequest
 )
 from services.auth_service import auth_service
 from services.email_service import email_service
@@ -341,4 +342,65 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during logout"
+        )
+
+
+@auth_router.put("/profile", response_model=UserResponse)
+async def update_profile(profile_data: UserProfileUpdate, current_user: User = Depends(get_current_user)):
+    """
+    Update current user's profile information
+    """
+    try:
+        # Update user profile
+        updated_user = await auth_service.update_user_profile(current_user, profile_data)
+        
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update profile"
+            )
+        
+        return auth_service.user_to_response(updated_user)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Profile update error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating profile"
+        )
+
+
+@auth_router.post("/change-password", response_model=dict)
+async def change_password(password_data: ChangePasswordRequest, current_user: User = Depends(get_current_user)):
+    """
+    Change current user's password
+    """
+    try:
+        # Change password
+        success = await auth_service.change_password(
+            current_user, 
+            password_data.current_password, 
+            password_data.new_password
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+        
+        return {
+            "message": "Password changed successfully",
+            "status": "success"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Password change error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while changing password"
         )
