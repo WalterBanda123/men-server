@@ -304,12 +304,12 @@ async def get_session_detail(
 
         message_list = [
             {
-                \"id\": str(m.id),
-                \"message\": m.message,
-                \"response\": m.response,
-                \"message_type\": m.message_type,
-                \"created_at\": m.created_at.isoformat() if m.created_at else \"\",
-                \"response_time_ms\": m.response_time_ms
+                "id": str(m.id),
+                "message": m.message,
+                "response": m.response,
+                "message_type": m.message_type,
+                "created_at": m.created_at.isoformat() if m.created_at else "",
+                "response_time_ms": m.response_time_ms
             }
             for m in messages
         ]
