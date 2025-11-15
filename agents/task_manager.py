@@ -1,14 +1,26 @@
 """
-Task Manager for orchestrating Google ADK agents
-Based on the agentic flow architecture documentation
+Task Manager for orchestrating agents
+Mock implementation to replace Google ADK dependencies
 """
 import logging
 import uuid
 from typing import Dict, Any, Optional
-from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
-from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
-from google.genai import types as adk_types
+
+# Mock implementations to replace Google ADK
+class MockSessionService:
+    def __init__(self):
+        self.sessions = {}
+
+class MockArtifactService:
+    def __init__(self):
+        self.artifacts = {}
+
+class MockRunner:
+    def __init__(self, agent, app_name: str, session_service, artifact_service):
+        self.agent = agent
+        self.app_name = app_name
+        self.session_service = session_service
+        self.artifact_service = artifact_service
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -25,12 +37,12 @@ class TaskManager:
         logger.info(f"Initializing TaskManager for agent {agent.name}")
         self.agent = agent
         
-        # Initialize ADK services
-        self.session_service = InMemorySessionService()
-        self.artifact_service = InMemoryArtifactService()
+        # Initialize mock services
+        self.session_service = MockSessionService()
+        self.artifact_service = MockArtifactService()
         
-        # Create the ADK runner
-        self.runner = Runner(
+        # Create the mock runner
+        self.runner = MockRunner(
             agent=self.agent,
             app_name="mens_health_agent",
             session_service=self.session_service,
@@ -44,7 +56,7 @@ class TaskManager:
         session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Process a user request through the agent system
+        Process a user request through the mock agent system
         
         Args:
             message: User's input message
@@ -61,69 +73,64 @@ class TaskManager:
             session_id = str(uuid.uuid4())
             logger.info(f"Generated new session_id: {session_id}")
         
-        # Get or create session
-        session = await self.session_service.get_session(
-            app_name="mens_health_agent",
-            user_id=user_id,
-            session_id=session_id
-        )
+        # Store session in mock service
+        self.session_service.sessions[session_id] = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "messages": []
+        }
         
-        if not session:
-            session = await self.session_service.create_session(
-                app_name="mens_health_agent",
-                user_id=user_id,
-                session_id=session_id,
-                state={}
-            )
-            logger.info(f"Created new session: {session_id}")
-        
-
-        
-        # Process chat requests with the Google ADK agent
-        logger.info("💬 Processing chat request with men's health agent")
-        
-        enhanced_message = f"User ID: {user_id}\n\n{message}"
-        request_content = adk_types.Content(
-            role="user",
-            parts=[adk_types.Part(text=enhanced_message)]
-        )
+        logger.info(f"💬 Processing message: {message}")
         
         try:
-            # Run agent asynchronously
-            events = self.runner.run_async(
-                user_id=user_id,
-                session_id=session_id,
-                new_message=request_content
-            )
+            # Mock response generation
+            # In a real implementation, this would call an actual LLM
+            response_message = self._generate_mock_response(message, context)
             
-            final_message = "(No response generated)"
-            raw_events = []
-            
-            # Process agent response events
-            async for event in events:
-                event_data = event.model_dump(exclude_none=True)
-                raw_events.append(event_data)
-                
-                # Extract final response from agent
-                if event.is_final_response() and event.content and event.content.role == 'model':
-                    if event.content and event.content.parts:
-                        final_message = event.content.parts[0].text
-                    logger.info(f"Final response: {final_message}")
+            # Store the conversation
+            self.session_service.sessions[session_id]["messages"].append({
+                "user": message,
+                "assistant": response_message,
+                "timestamp": uuid.uuid4().hex[:8]
+            })
             
             return {
-                "message": final_message,
+                "message": response_message,
                 "status": "success",
                 "data": {
-                    "raw_events": raw_events[-1] if raw_events else None,
-                    "processing_method": "agent_llm",
-                    "session_id": session_id
+                    "processing_method": "mock_agent",
+                    "session_id": session_id,
+                    "agent_name": self.agent.name
                 }
             }
             
         except Exception as e:
-            logger.error(f"Error processing task with agent: {str(e)}")
+            logger.error(f"Error processing task: {str(e)}")
             return {
-                "message": f"Error: {str(e)}",
+                "message": f"I apologize, but I encountered an error processing your request. Please try again.",
                 "status": "error",
                 "data": {"session_id": session_id}
             }
+    
+    def _generate_mock_response(self, message: str, context: Dict[str, Any]) -> str:
+        """
+        Generate a mock response based on the message content
+        In a real implementation, this would use an actual LLM
+        """
+        message_lower = message.lower()
+        
+        # Men's health specific responses
+        if any(word in message_lower for word in ["fitness", "workout", "exercise"]):
+            return "Based on your fitness inquiry, I recommend starting with a balanced routine that includes both cardiovascular exercise and strength training. Would you like me to suggest a specific workout plan tailored to your fitness level?"
+        
+        elif any(word in message_lower for word in ["nutrition", "diet", "food", "eat"]):
+            return "Nutrition is crucial for men's health. A balanced diet should include lean proteins, complex carbohydrates, healthy fats, and plenty of vegetables. What specific nutritional goals are you trying to achieve?"
+        
+        elif any(word in message_lower for word in ["health", "wellness", "checkup"]):
+            return "Men's health encompasses physical, mental, and emotional well-being. Regular check-ups, preventive care, and healthy lifestyle choices are key. Is there a specific health concern you'd like to discuss?"
+        
+        elif any(word in message_lower for word in ["stress", "mental health", "anxiety"]):
+            return "Mental health is just as important as physical health. Stress management techniques like meditation, regular exercise, and adequate sleep can help. If you're experiencing persistent stress or anxiety, consider speaking with a healthcare professional."
+        
+        else:
+            return "Thank you for your question about men's health. I'm here to help with fitness, nutrition, wellness, and general health guidance. Could you provide more specific details about what you'd like to know?"

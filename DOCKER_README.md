@@ -7,11 +7,13 @@ This guide explains how to build and run the Men's Health Server using Docker.
 ### 1. Environment Setup
 
 Copy the Docker environment template:
+
 ```bash
 cp .env.docker .env
 ```
 
 Edit `.env` with your actual configuration:
+
 - Replace AWS credentials with your actual SES credentials
 - Change the JWT secret key to a strong, random value
 - Update the sender email to your verified SES email
@@ -19,11 +21,13 @@ Edit `.env` with your actual configuration:
 ### 2. Build and Run with Docker Compose
 
 Start the entire stack (API + MongoDB):
+
 ```bash
 docker-compose up --build
 ```
 
 This will:
+
 - Build the Men's Health API Docker image
 - Start a MongoDB container with proper initialization
 - Set up networking between services
@@ -59,15 +63,15 @@ docker run -d \
 
 The following environment variables are required:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `MONGODB_URL` | MongoDB connection string | `mongodb://user:pass@host:port/db` |
-| `DATABASE_NAME` | Database name | `mens_health_db` |
-| `SECRET_KEY` | JWT secret key | `your-256-bit-secret` |
-| `AWS_ACCESS_KEY_ID` | AWS access key for SES | `AKIA...` |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key for SES | `your-secret-key` |
-| `AWS_REGION` | AWS region | `us-east-1` |
-| `SENDER_EMAIL` | Verified sender email | `noreply@yourdomain.com` |
+| Variable                | Description               | Example                            |
+| ----------------------- | ------------------------- | ---------------------------------- |
+| `MONGODB_URL`           | MongoDB connection string | `mongodb://user:pass@host:port/db` |
+| `DATABASE_NAME`         | Database name             | `mens_health_db`                   |
+| `SECRET_KEY`            | JWT secret key            | `your-256-bit-secret`              |
+| `AWS_ACCESS_KEY_ID`     | AWS access key for SES    | `AKIA...`                          |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key for SES    | `your-secret-key`                  |
+| `AWS_REGION`            | AWS region                | `us-east-1`                        |
+| `SENDER_EMAIL`          | Verified sender email     | `noreply@yourdomain.com`           |
 
 ### Security Considerations
 
@@ -80,6 +84,7 @@ The following environment variables are required:
 ### Health Monitoring
 
 The container includes a health check endpoint at `/health` that returns:
+
 ```json
 {
   "status": "healthy",
@@ -94,6 +99,7 @@ Docker health checks run every 30 seconds with a 30-second timeout.
 ### Development Mode
 
 For development with auto-reload:
+
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
@@ -101,6 +107,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ### Debug Mode
 
 To run with debug logging:
+
 ```bash
 docker run -e LOG_LEVEL=debug mens-health-server
 ```
@@ -108,6 +115,7 @@ docker run -e LOG_LEVEL=debug mens-health-server
 ### Email Verification Bypass
 
 For testing without AWS SES:
+
 ```bash
 docker run -e DEVELOPMENT_MODE=true mens-health-server
 ```
@@ -117,11 +125,13 @@ docker run -e DEVELOPMENT_MODE=true mens-health-server
 ### Container Logs
 
 View API logs:
+
 ```bash
 docker logs mens-health-api
 ```
 
 View MongoDB logs:
+
 ```bash
 docker logs mens-health-mongodb
 ```
@@ -141,6 +151,7 @@ docker logs mens-health-mongodb
 ### Port Conflicts
 
 If port 8004 is in use:
+
 ```bash
 docker-compose down
 # Edit docker-compose.yml to change port mapping
@@ -152,6 +163,7 @@ docker-compose up
 ### Multi-stage Build
 
 The Dockerfile uses a multi-stage approach for smaller production images:
+
 - Base: Python 3.12 slim
 - Dependencies cached separately for faster rebuilds
 - Non-root user for security
@@ -160,6 +172,7 @@ The Dockerfile uses a multi-stage approach for smaller production images:
 ### Image Size Optimization
 
 The image is optimized for production:
+
 - Uses slim Python base image
 - Removes build dependencies after installation
 - Excludes development files via `.dockerignore`
@@ -170,8 +183,9 @@ The image is optimized for production:
 Once running, the following endpoints are available:
 
 ### Authentication
+
 - `POST /auth/signup` - User registration
-- `POST /auth/signin` - User login  
+- `POST /auth/signin` - User login
 - `POST /auth/verify-email` - Email verification
 - `POST /auth/verify-signin` - Sign-in verification
 - `GET /auth/me` - Get current user profile
@@ -180,18 +194,21 @@ Once running, the following endpoints are available:
 - `POST /auth/logout` - User logout
 
 ### Chat
+
 - `WS /chat/ws/{session_id}` - WebSocket chat
 - `POST /chat/message` - Send chat message
 - `GET /chat/conversations` - Get conversations
 - `GET /chat/conversation/{session_id}` - Get specific conversation
 
 ### Health & Monitoring
+
 - `GET /health` - Health check
 - `GET /.well-known/agent.json` - Agent metadata
 
 ## Support
 
 For issues or questions:
+
 1. Check the logs: `docker logs mens-health-api`
 2. Verify environment variables are set correctly
 3. Ensure all required ports are available
